@@ -1,0 +1,15 @@
+<h1>{title}</h1>
+
+{#let warning}
+  <h6>{text}</h6>
+{/let}
+
+{#if empty}
+  <p>No users</p>
+{/if}
+
+<ol>
+{#for users}
+  <li style="color: {color}">{name}</li>
+{/for}
+</ol>
