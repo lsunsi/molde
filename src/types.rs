@@ -10,5 +10,6 @@ pub enum Stmt {
 #[derive(Debug)]
 pub struct Template {
     pub ident: syn::Ident,
-    pub stmts: Vec<Stmt>,
+    pub pos_stmts: Vec<Stmt>,
+    pub neg_stmts: Vec<Stmt>,
 }

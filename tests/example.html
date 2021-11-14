@@ -1,15 +1,33 @@
 <h1>{title}</h1>
 
-{#let warning}
+{#let plead}
   <h6>{text}</h6>
 {/let}
 
-{#if empty}
-  <p>No users</p>
+{#let verdict}
+  {#if guilty}
+    <h1>sentence</h1>
+  {/if}
+{%else}
+  <span>No verdict reached yet</span>
+{/let}
+
+{#if valid}
+  <p>Sustained!</p>
+{%else}
+  <p>Overruled...</p>
 {/if}
 
 <ol>
-{#for users}
+{#for lawyers}
   <li style="color: {color}">{name}</li>
 {/for}
 </ol>
+
+<ul>
+{#for judges}
+  <li style="font-weight: bold">{name}</li>
+{%else}
+  No judges today!
+{/for}
+</ul>
