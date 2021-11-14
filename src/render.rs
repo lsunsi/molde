@@ -12,7 +12,7 @@ pub fn structs(t: &Template) -> TokenStream {
     let mut list = vec![];
     let mut props = vec![];
 
-    for stmt in &t.stmts {
+    for stmt in &t.pos_stmts {
         match stmt {
             Stmt::Let(t) => {
                 let (ident, items) = structs2(&root_ident, t);
@@ -49,7 +49,7 @@ fn structs2(parent_ident: &Ident, t: &Template) -> (Ident, Vec<TokenStream>) {
     let mut list = vec![];
     let mut props = vec![];
 
-    for stmt in &t.stmts {
+    for stmt in &t.pos_stmts {
         match stmt {
             Stmt::Let(t) => {
                 let (inner_ident, items) = structs2(&ident, t);
@@ -84,7 +84,7 @@ pub fn method(t: Template) -> TokenStream {
     let root_ident = quote::format_ident!("{}", pascal(&t.ident.to_string()));
 
     let parent_ident = quote::format_ident!("{}", "self");
-    let renders = render_stmts(&parent_ident, t.stmts);
+    let renders = render_stmts(&parent_ident, t.pos_stmts);
 
     quote! {
         impl #root_ident {
@@ -102,17 +102,56 @@ fn render_stmts(parent_ident: &Ident, stmts: Vec<Stmt>) -> Vec<TokenStream> {
         let rendered = match stmt {
             Stmt::Lit(a) => quote! { #a.to_owned() },
             Stmt::Show(ident) => quote! { #parent_ident.#ident },
-            Stmt::If(Template { ident, stmts }) => {
-                let a = render_stmts(parent_ident, stmts);
-                quote! { #parent_ident.#ident.then(|| [#(#a),*].concat()).unwrap_or_else(|| "".to_owned()) }
+            Stmt::If(Template {
+                ident,
+                pos_stmts,
+                neg_stmts,
+            }) => {
+                let pos_stmts = render_stmts(parent_ident, pos_stmts);
+                let neg_stmts = render_stmts(parent_ident, neg_stmts);
+
+                let pos_stmts_len = pos_stmts.len();
+                let neg_stmts_len = neg_stmts.len();
+
+                quote! {
+                    #parent_ident.#ident
+                        .then(|| ([#(#pos_stmts),*] as [String; #pos_stmts_len]).concat())
+                        .unwrap_or_else(|| ([#(#neg_stmts),*] as [String; #neg_stmts_len]).concat())
+                }
             }
-            Stmt::Let(Template { ident, stmts }) => {
-                let a = render_stmts(&ident, stmts);
-                quote! { #parent_ident.#ident.map(|#ident| [#(#a),*].concat()).unwrap_or_else(|| "".to_owned()) }
+            Stmt::Let(Template {
+                ident,
+                pos_stmts,
+                neg_stmts,
+            }) => {
+                let pos_stmts = render_stmts(&ident, pos_stmts);
+                let neg_stmts = render_stmts(parent_ident, neg_stmts);
+
+                let pos_stmts_len = pos_stmts.len();
+                let neg_stmts_len = neg_stmts.len();
+
+                quote! {
+                    #parent_ident.#ident
+                        .map(|#ident| ([#(#pos_stmts),*] as [String; #pos_stmts_len]).concat())
+                        .unwrap_or_else(|| ([#(#neg_stmts),*] as [String; #neg_stmts_len]).concat())
+                }
             }
-            Stmt::For(Template { ident, stmts }) => {
-                let a = render_stmts(&ident, stmts);
-                quote! { #parent_ident.#ident.into_iter().map(|#ident| [#(#a),*].concat()).collect() }
+            Stmt::For(Template {
+                ident,
+                pos_stmts,
+                neg_stmts,
+            }) => {
+                let pos_stmts = render_stmts(&ident, pos_stmts);
+                let neg_stmts = render_stmts(parent_ident, neg_stmts);
+
+                let pos_stmts_len = pos_stmts.len();
+                let neg_stmts_len = neg_stmts.len();
+
+                quote! {
+                    #parent_ident.#ident.is_empty()
+                        .then(|| ([#(#neg_stmts),*] as [String; #neg_stmts_len]).concat())
+                        .unwrap_or_else(|| #parent_ident.#ident.into_iter().map(|#ident| ([#(#pos_stmts),*] as [String; #pos_stmts_len]).concat()).collect())
+                }
             }
         };
 
